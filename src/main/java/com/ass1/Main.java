@@ -1,4 +1,4 @@
-package com.in5020.assignment1;
+package com.ass1;
 
 public class Main {
     public static void main(String[] args) {

@@ -8,4 +8,5 @@ public interface ServerInterface extends Remote {
     int getNumberOfCities(String countryName, int minPopulation) throws RemoteException;
     int getNumberOfCountries(int cityCount, int minPopulation) throws RemoteException;
     int getNumberOfCountries(int cityCount, int minPopulation, int maxPopulation) throws RemoteException;
+    int GetQueueLength() throws RemoteException;
 }

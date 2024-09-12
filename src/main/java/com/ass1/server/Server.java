@@ -1,11 +1,19 @@
 package com.ass1.server;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
-import java.io.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The Server class implements the ServerInterface and handles the processing
@@ -23,6 +31,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         loadCitiesFromCSV();
         System.out.println("Loaded " + countries.size() + " countries.");
     }
+
+    @Override
+    public int GetQueueLength() throws RemoteException {
+        return 0;
+        // should return the size of its queue
+    } 
 
     /**
      * Loads city data from a CSV file and stores it in a map organized by country names.
@@ -101,9 +115,14 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     public static void main(String[] args){
         try {
             Registry registry = LocateRegistry.getRegistry();
-            Server server = new Server();
-            // Binds the remote object by the name 'server' in the RMI registry
-            registry.bind("server", server);
+            Server[] servers = new Server[5];
+
+            for (int i = 0; i < servers.length; i++) {
+                servers[i] = new Server();
+                ServerInterface serverStub = (ServerInterface) UnicastRemoteObject.exportObject(registry, 0);
+                String serverName = "Server zone " + i;
+                registry.bind(serverName, serverStub);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

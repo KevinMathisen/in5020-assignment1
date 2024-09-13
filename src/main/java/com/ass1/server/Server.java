@@ -14,6 +14,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * The Server class implements the ServerInterface and handles the processing
@@ -21,6 +24,7 @@ import java.util.Map;
  */
 public class Server extends UnicastRemoteObject implements ServerInterface {
     private Map<String, List<City>> countries = new HashMap<>();
+    private BlockingQueue<FutureTask<Integer>> waitingList = new LinkedBlockingQueue<>();
 
     /**
      * Constructs a Server object and initializes the country data from the CSV file.
@@ -30,11 +34,27 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         System.out.println("Initializing server...");
         loadCitiesFromCSV();
         System.out.println("Loaded " + countries.size() + " countries.");
+
+        // Start executor thread
+        Thread executorThread = new Thread(() -> {
+            while (true) { 
+                try {
+                    Task task = waitingList.take();
+
+                    Object result = processTask(task);
+
+                    task.getFutureResult().complete(result);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        executorThread.start();
     }
 
     @Override
     public int GetQueueLength() throws RemoteException {
-        return 0;
+        return waitingList.size();
         // should return the size of its queue
     } 
 

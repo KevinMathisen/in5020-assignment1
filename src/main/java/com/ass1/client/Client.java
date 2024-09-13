@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import com.ass1.proxy.ProxyInterface;
 import com.ass1.server.ServerInterface;
 
 public class Client {
@@ -20,15 +22,26 @@ public class Client {
         try {
             // Connect to RMI registry at default port 1099
             Registry registry = LocateRegistry.getRegistry();
-            ServerInterface server = (ServerInterface) registry.lookup("server");
 
+            // Lookup the proxy from the registry
+            ProxyInterface proxy = (ProxyInterface) registry.lookup("proxy"); // Assume 'proxy' is registered with this name
+
+            // server = proxy.getAvailableServer(); // get the server from the proxy
             // Path to the input file
-            String inputFile = "src/main/resources/exercise_1_input.txt";
+            String inputFile = "src/main/resources/com/ass1/client/data/exercise_1_input.txt";
             String outputFile = "naive_server.txt"; // maybe different path?
 
-            // Parse and execute queries
+            // Parse and execute queries 
             List<Query> queries = parseInputFile(inputFile);
-            executeQueries(queries, server, outputFile);
+
+            // Loop through each query, get the available server for the query's zone, and execute the query
+            for (Query query : queries) {
+                // Get the available server for the query's zone from the proxy
+                ServerInterface server = proxy.getAvailableServer(query.zone);
+
+                // Now execute the query on the obtained server
+                executeQueries(Arrays.asList(query), server, outputFile);
+            }
 
         } catch (RemoteException | NotBoundException e) {
             e.printStackTrace();
@@ -128,7 +141,7 @@ public class Client {
     }
 
     /**
-     * Executes the list of queries by invoking the appropriate method on the
+     * Executes list of queries by invoking the appropriate method on the
      * server, records the turnaround, execution, and waiting times, and logs
      * the results to an output file. Also, it tracks stats (like average, min,
      * and max times) for each method type.

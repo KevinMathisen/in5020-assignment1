@@ -37,6 +37,19 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 		}
 	}
 
+	public static void main(String[] args) throws java.rmi.AlreadyBoundException {
+		try {
+			Registry registry = LocateRegistry.getRegistry();
+
+			Proxy proxy = new Proxy();
+			ProxyInterface proxyStub = (ProxyInterface) UnicastRemoteObject.exportObject(proxy, 0);
+			registry.bind("Proxy", proxyStub);
+			
+		} catch (RemoteException | AlreadyBoundException e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * Returns a reference to an available server in proximity to a given zone
 	 * @param zone - the zone the client requsts from

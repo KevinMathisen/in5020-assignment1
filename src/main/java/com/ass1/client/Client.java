@@ -297,10 +297,7 @@ public class Client {
         }
     }
 
-    /**
-     * A helper class to track stats (turnaround, execution, waiting times) for
-     * each method type.
-     */
+    /* A helper class to track stats (turnaround, execution, waiting times) for each method type.*/
     static class TaskStats {
 
         private long totalTurnaroundTime = 0;  // Total turnaround time for all tasks of this method type

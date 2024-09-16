@@ -181,7 +181,6 @@ public class Client {
         // Create a map to store stats for each method
         HashMap<String, TaskStats> methodStats = new HashMap<>();
 
-        // Try-with-resources to automatically close the FileWriter after usage 
         try (FileWriter writer = new FileWriter(outputFile)) {
             for (Query query : queries) {
                 // Measure the total turnaround time, starting from the beginning of the query execution

@@ -4,12 +4,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Proxy;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -20,16 +20,42 @@ public class Client {
 
     public static void main(String[] args) {
         try {
-            // Connect to RMI registry at default port 1099
-            Registry registry = LocateRegistry.getRegistry();
-
-            // Lookup the proxy from the registry
-            ProxyInterface proxy = (ProxyInterface) registry.lookup("proxy"); // Assume 'proxy' is registered with this name
-
-            // server = proxy.getAvailableServer(); // get the server from the proxy
-            // Path to the input file
+            // Default values for delay, input, output file and cache type
+            int delay = 50;
             String inputFile = "src/main/resources/com/ass1/client/data/exercise_1_input.txt";
-            String outputFile = "naive_server.txt"; // maybe different path?
+            String outputFile = "naive.txt";
+            String cacheType = null;
+
+            // Parse command-line arguments
+            for (int i = 0; i < args.length; i++) {
+                if (args[i].equals("--delay") && i + 1 < args.length) {
+                    delay = Integer.parseInt(args[i + 1]);
+                }
+                if (args[i].equals("--cache") && i + 1 < args.length) {
+                    cacheType = args[i + 1];
+                } else if (args[i].equals("--output") && i + 1 < args.length) {
+                    outputFile = args[i + 1];
+                }
+            }
+
+            // Change output file based on cache type
+            if (outputFile.equals("naive_server.txt")) {
+                switch (cacheType) {
+                    case "server_cache":
+                        outputFile = "server_cache.txt";
+                        break;
+                    case "client_cache":
+                        outputFile = "client_cache.txt";
+                        break;
+                    default:
+                        outputFile = "naive.txt";
+                        break;
+                }
+            }
+
+            // Connect to RMI registry at default port 1099 and search for the proxy from that registry
+            Registry registry = LocateRegistry.getRegistry();
+            ProxyInterface proxy = (ProxyInterface) registry.lookup("proxy"); // Assume 'proxy' is registered with this name
 
             // Parse and execute queries 
             List<Query> queries = parseInputFile(inputFile);
@@ -39,8 +65,8 @@ public class Client {
                 // Get the available server for the query's zone from the proxy
                 ServerInterface server = proxy.getAvailableServer(query.zone);
 
-                // Now execute the query on the obtained server
-                executeQueries(Arrays.asList(query), server, outputFile);
+                // Now execute the query on the correct server
+                executeQueries(Arrays.asList(query), server, outputFile, delay);
             }
 
         } catch (RemoteException | NotBoundException e) {
@@ -57,7 +83,6 @@ public class Client {
      *
      * Expected input format: <method name> <arg1> <arg2> <arg3>
      * Zone:<zone number>
-     * Example line in input file: getPopulationofCountry United States Zone:1
      *
      * @param inputFile The path to the input file containing the queries.
      * @return A list of Query objects created from the parsed input file.
@@ -152,7 +177,7 @@ public class Client {
      * @param outputFile The path to the output file where results and stats
      * will be logged.
      */
-    private static void executeQueries(List<Query> queries, ServerInterface server, String outputFile) {
+    private static void executeQueries(List<Query> queries, ServerInterface server, String outputFile, int delay) {
         // Create a map to store stats for each method
         HashMap<String, TaskStats> methodStats = new HashMap<>();
 
@@ -173,7 +198,7 @@ public class Client {
                         // Measure execution start time for the specific method
                         startExecutionTime = System.currentTimeMillis();
                         // Call the server-side method getPopulationofCountry
-                        result = server.getPopulationofCountry(query.args.get(0));
+                        result = server.getPopulationOfCountry(query.args.get(0));
                         // Measure execution end time after getting the result from the server
                         endExecutionTime = System.currentTimeMillis();
                         break;
@@ -206,7 +231,7 @@ public class Client {
                 updateStats(methodStats, query.methodName, turnaroundTime, executionTime, waitingTime);
 
                 // Simulate delay between queries (either 50ms or 20ms) - two threads???
-                Thread.sleep(50);
+                Thread.sleep(delay);
             }
             // After all queries are processed, log the final stats for each method type
             logFinalStats(writer, methodStats);
@@ -251,13 +276,7 @@ public class Client {
      *
      * @param methodStats A map that stores stats for each method type (method
      * name -> TaskStats).
-     * @param methodName The name of the method whose stats are being updated.
-     * @param turnaroundTime The total time taken for the query (turnaround
-     * time).
-     * @param executionTime The time taken by the server to execute the query
-     * (execution time).
-     * @param waitingTime The time the query spent waiting before being
-     * processed (waiting time).
+     *
      */
     private static void updateStats(HashMap<String, TaskStats> methodStats, String methodName, long turnaroundTime, long executionTime, long waitingTime) {
         // Retrieve the current stats for this method type or create a new TaskStats if none exist
@@ -268,16 +287,7 @@ public class Client {
         methodStats.put(methodName, stats);
     }
 
-    /**
-     * Logs the final stats for all method types to the output file after all
-     * queries are processed.
-     *
-     * @param writer The FileWriter used to log the final stats to the output
-     * file.
-     * @param methodStats A map that contains the stats for each method type
-     * (method name -> TaskStats).
-     * @throws IOException If there is an error writing to the output file.
-     */
+    /* Logs the final stats for all method types to the output file after all queries are processed. */
     private static void logFinalStats(FileWriter writer, HashMap<String, TaskStats> methodStats) throws IOException {
         // Iterate over each method type and log its stats (average, min, max times)
         for (String methodName : methodStats.keySet()) {

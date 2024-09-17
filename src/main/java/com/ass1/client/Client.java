@@ -55,7 +55,7 @@ public class Client {
 
             // Connect to RMI registry at default port 1099 and search for the proxy from that registry
             Registry registry = LocateRegistry.getRegistry();
-            ProxyInterface proxy = (ProxyInterface) registry.lookup("proxy"); // Assume 'proxy' is registered with this name
+            ProxyInterface proxy = (ProxyInterface) registry.lookup("Proxy"); // Assume 'proxy' is registered with this name
 
             // Parse and execute queries 
             List<Query> queries = parseInputFile(inputFile);

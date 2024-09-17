@@ -110,7 +110,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 			String serverName = serverNames.get(zone); 
 			ServerInterface server = (ServerInterface) registry.lookup(serverName);
 
-			int queueLength = server.GetQueueLength();
+			int queueLength = server.getQueueLength();
 
 			serverQueueLength.put(zone, queueLength);
 		} catch (RemoteException | AlreadyBoundException | NotBoundException e) {

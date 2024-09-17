@@ -1,5 +1,6 @@
 package com.ass1.client;
 
+import java.util.Arrays;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -49,44 +50,42 @@ public class Client {
      * @param inputFile The path to the input file containing the queries.
      * @return A list of Query objects created from the parsed input file.
      */
-    private static List<Query> parseInputFile(String inputFile) {
-        // List to store parsed queries
+    
+      static List<Query> parseInputFile(String inputFile) {
         List<Query> queries = new ArrayList<>();
-
+    
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             String line;
-
-            // Loop through each line in the input file
+    
             while ((line = br.readLine()) != null) {
-                // Split the line into individual "parts" based on spaces
-                String[] parts = line.split(" ");
-                // The first part is the method name (e.g., getPopulationofCountry)
-                String methodName = parts[0];
-                // A list to store the arguments for the method (e.g., "United States")
-                List<String> args = new ArrayList<>();
-                // Variable to store the zone number (e.g., Zone:1 -> zone = 1)
-                int zone = -1;
-
-                // Start from the second part to capture arguments and zone number
-                for (int i = 1; i < parts.length; i++) {
-                    // If the part starts with "Zone:", extract the zone number
-                    if (parts[i].startsWith("Zone:")) {
-                        // Extract the number after "Zone:" and convert it to an integer
-                        zone = Integer.parseInt(parts[i].substring(5));
-                    } else {
-                        // Otherwise, add the part to the arguments list
-                        args.add(parts[i]);
-                    }
+                int zoneIndex = line.indexOf("Zone:");
+                if (zoneIndex == -1) {
+                    continue; // Skip lines without zone information
                 }
-                // Create a new Query object with the method name, arguments, and zone
-                // and add it to the list of queries
+    
+                int zone = Integer.parseInt(line.substring(zoneIndex + 5).trim());  // Extracts the zone number safely
+    
+                // The rest of the line without the zone part
+                String methodAndArgs = line.substring(0, zoneIndex).trim();
+    
+                String[] parts = methodAndArgs.split(" ", 2);  // Split into method name and the arguments as one string
+                String methodName = parts[0];
+                List<String> args = new ArrayList<>();
+                if (parts.length > 1) {
+                    String arguments = parts[1];
+                    // Handle arguments that could be multiple words
+                    args.addAll(Arrays.asList(arguments.split(" (?=\\d)")));  // Splits by space before a number
+                }
+    
                 queries.add(new Query(methodName, args, zone));
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    
         return queries;
     }
+    
 
     /**
      * A class representing a single query parsed from the input file. A Query
@@ -156,29 +155,35 @@ public class Client {
 
                 // Executing remote method invocation based on the method name
                 switch (query.methodName) {
-                    case "getPopulationofCountry":
-                        // Measure execution start time for the specific method
+                    case "getPopulationOfCountry":
                         startExecutionTime = System.currentTimeMillis();
-                        // Call the server-side method getPopulationofCountry
-                        result = server.getPopulationofCountry(query.args.get(0));
-                        // Measure execution end time after getting the result from the server
+                        result = server.getPopulationOfCountry(query.args.get(0));
                         endExecutionTime = System.currentTimeMillis();
                         break;
-
+                
                     case "getNumberofCities":
                         startExecutionTime = System.currentTimeMillis();
-                        // Parse minimum population from the query's arguments
                         int minPop = Integer.parseInt(query.args.get(1));
-                        // Call the server-side method getNumberofCities
-                        result = server.getNumberOfCities(query.args.get(0), minPop);  // e.g., "Norway"
+                        result = server.getNumberOfCities(query.args.get(0), minPop);
                         endExecutionTime = System.currentTimeMillis();
                         break;
-
+                
                     case "getNumberofCountries":
                         startExecutionTime = System.currentTimeMillis();
-
-                    // ++ resterende methods ...
+                        if (query.args.size() == 2) {
+                            int cityCount = Integer.parseInt(query.args.get(0));
+                            int minPopulation = Integer.parseInt(query.args.get(1));
+                            result = server.getNumberOfCountries(cityCount, minPopulation);
+                        } else if (query.args.size() == 3) {
+                            int cityCount = Integer.parseInt(query.args.get(0));
+                            int minPopulation = Integer.parseInt(query.args.get(1));
+                            int maxPopulation = Integer.parseInt(query.args.get(2));
+                            result = server.getNumberOfCountries(cityCount, minPopulation, maxPopulation);
+                        }
+                        endExecutionTime = System.currentTimeMillis();
+                        break;
                 }
+                
 
                 // Log the result and time metrics for the query
                 logResult(writer, query, result, startTurnaroundTime, startExecutionTime, endExecutionTime);
@@ -226,10 +231,12 @@ public class Client {
         long turnaroundTime = endTurnaroundTime - startTurnaroundTime;  // Total time taken for the query
         long executionTime = endExecutionTime - startExecutionTime;  // Time taken by the server to execute the query
         long waitingTime = turnaroundTime - executionTime;  // Time spent waiting (turnaround - execution)
-
-        // Log the result and time metrics in the spesific format
-        writer.write(String.format("%d %s (turnaround time: %d ms, execution time: %d ms, waiting time: %d ms, processed by Server Zone:%d)\n",
-                result, query.methodName, turnaroundTime, executionTime, waitingTime, query.zone));
+    
+        int serverIndex = query.zone;  // Zone directly maps to server index
+    
+        // Format the output as specified
+        writer.write(String.format("%d %s Zone:%d (turnaround time: %d ms, execution time: %d ms, waiting time: %d ms, processed by Server %d)\n",
+                result, query.methodName, query.zone, turnaroundTime, executionTime, waitingTime, serverIndex));
     }
 
     /**
@@ -266,12 +273,16 @@ public class Client {
      * @throws IOException If there is an error writing to the output file.
      */
     private static void logFinalStats(FileWriter writer, HashMap<String, TaskStats> methodStats) throws IOException {
-        // Iterate over each method type and log its stats (average, min, max times)
+        // Iterate over each method type and log its stats
         for (String methodName : methodStats.keySet()) {
             TaskStats stats = methodStats.get(methodName);
             writer.write(String.format("%s avg turn-around time: %d ms, avg execution time: %d ms, avg waiting time: %d ms, min turn-around time: %d ms, max turn-around time: %d ms\n",
-                    methodName, stats.getAverageTurnaroundTime(), stats.getAverageExecutionTime(), stats.getAverageWaitingTime(),
-                    stats.getMinTurnaroundTime(), stats.getMaxTurnaroundTime()));
+                    methodName,
+                    stats.getAverageTurnaroundTime(), 
+                    stats.getAverageExecutionTime(), 
+                    stats.getAverageWaitingTime(),
+                    stats.getMinTurnaroundTime(), 
+                    stats.getMaxTurnaroundTime()));
         }
     }
 

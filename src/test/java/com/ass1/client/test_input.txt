@@ -1,0 +1,48 @@
+getNumberofCountries 41 63867 79086  Zone:2
+getNumberofCountries 17 30268 116162  Zone:1
+getNumberofCountries 1 51383 118311  Zone:5
+getNumberofCountries 34 66457 135930  Zone:2
+getNumberofCountries 34 66457 135930  Zone:2
+getNumberofCountries 34 66457 135930  Zone:2
+getNumberofCountries 34 66457 135930  Zone:2
+getNumberofCountries 31 82258 133174  Zone:3
+getNumberofCountries 31 85598 137412  Zone:3
+getNumberofCountries 5 10287 43684  Zone:5
+getNumberofCountries 4 82713 122684  Zone:1
+getNumberofCountries 4 82713 122684  Zone:1
+getNumberofCountries 14 74362 118436  Zone:5
+getNumberofCountries 25 26435 38604  Zone:5
+getNumberofCountries 25 26435 38604  Zone:5 
+getNumberofCountries 9 20946 93972  Zone:1
+getNumberofCountries 35 33113 56573  Zone:5 
+getNumberofCities Bahamas 55319 Zone:1
+getNumberofCities Romania 88122 Zone:4
+getNumberofCities Thailand 90539 Zone:4
+getNumberofCities Peru 78800 Zone:4
+getNumberofCities Peru 78800 Zone:4
+getNumberofCities Ghana 92745 Zone:5
+getNumberofCities Panama 35278 Zone:5
+getNumberofCities Panama 35278 Zone:5
+getNumberofCities Panama 35278 Zone:5
+getNumberofCities Guinea 54926 Zone:4
+getNumberofCities Turkey 94184 Zone:3
+getNumberofCountries 35 33113 56573  Zone:5
+getNumberofCountries 41 95993 150104  Zone:1
+getNumberofCountries 31 81908 163365  Zone:2
+getNumberofCountries 31 81908 163365  Zone:2
+getNumberofCountries 31 81908 163365  Zone:2
+getNumberofCountries 16 51743 94833  Zone:2
+getNumberofCountries 6 66146 105143  Zone:5
+getNumberofCountries 6 66146 105143  Zone:5
+getNumberofCountries 13 40012 130905  Zone:2
+getNumberofCountries 26 37174 129954  Zone:4
+getNumberofCountries 8 65490 91577  Zone:1 
+getPopulationofCountry Sweden Zone:1
+getPopulationofCountry Greece Zone:4
+getPopulationofCountry Greece Zone:4
+getPopulationofCountry Thailand Zone:1
+getPopulationofCountry Pakistan Zone:2
+getPopulationofCountry Oman Zone:1
+getPopulationofCountry Benin Zone:4
+getPopulationofCountry Benin Zone:4
+getPopulationofCountry Benin Zone:4

@@ -11,7 +11,9 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.ass1.proxy.ProxyInterface;
 import com.ass1.server.ServerInterface;
@@ -119,45 +121,6 @@ public class Client {
         }
 
         return queries;
-    }
-
-    /**
-     * A class representing a single query parsed from the input file. A Query
-     * consists of a method name, a list of arguments, and a zone.
-     */
-    static class Query {
-
-        String methodName;
-        List<String> args;
-        int zone;
-
-        /**
-         * Constructor to initialize a Query object.
-         *
-         * @param methodName The name of the method (e.g.,
-         * getPopulationofCountry).
-         * @param args The list of arguments for the method.
-         * @param zone The zone number associated with the query.
-         */
-        Query(String methodName, List<String> args, int zone) {
-            this.methodName = methodName;
-            this.args = args;
-            this.zone = zone;
-        }
-
-        /**
-         * Overrides the default toString method to provide a string
-         *
-         * @return A string representation of the Query object.
-         */
-        @Override
-        public String toString() {
-            return "Query{"
-                    + "methodName='" + methodName + '\''
-                    + ", args=" + args
-                    + ", zone=" + zone
-                    + '}';
-        }
     }
 
     /**
@@ -298,6 +261,44 @@ public class Client {
         }
     }
 
+        /**
+     * A class representing a single query parsed from the input file. A Query
+     * consists of a method name, a list of arguments, and a zone.
+     */
+    static class Query {
+        String methodName;
+        List<String> args;
+        int zone;
+
+        /**
+         * Constructor to initialize a Query object.
+         *
+         * @param methodName The name of the method (e.g.,
+         * getPopulationofCountry).
+         * @param args The list of arguments for the method.
+         * @param zone The zone number associated with the query.
+         */
+        Query(String methodName, List<String> args, int zone) {
+            this.methodName = methodName;
+            this.args = args;
+            this.zone = zone;
+        }
+
+        /**
+         * Overrides the default toString method to provide a string
+         *
+         * @return A string representation of the Query object.
+         */
+        @Override
+        public String toString() {
+            return "Query{"
+                    + "methodName='" + methodName + '\''
+                    + ", args=" + args
+                    + ", zone=" + zone
+                    + '}';
+        }
+    }
+
     /* A helper class to track stats (turnaround, execution, waiting times) for each method type.*/
     static class TaskStats {
 
@@ -353,5 +354,22 @@ public class Client {
         public long getMaxTurnaroundTime() {
             return maxTurnaroundTime;
         }
+    }
+}
+
+/**
+ * Simple cache with max 150 entries, removing the oldest entry when full
+ */
+class Cache extends LinkedHashMap<String, Integer> {
+    private final int cacheSize;
+
+    public Cache(int cacheSize) {
+        super(cacheSize+1, 1.0f, true);
+        this.cacheSize = cacheSize;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
+        return size() > cacheSize;
     }
 }

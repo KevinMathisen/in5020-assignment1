@@ -9,26 +9,65 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import com.ass1.proxy.ProxyInterface;
 import com.ass1.server.ServerInterface;
 
 public class Client {
 
     public static void main(String[] args) {
         try {
-            // Connect to RMI registry at default port 1099
+            // Default values for delay, input, output file and cache type
+            int delay = 50;
+            String inputFile = "src/main/resources/com/ass1/client/data/exercise_1_input.txt";
+            String outputFile = "naive.txt";
+            String cacheType = null;
+
+            // Parse command-line arguments
+            for (int i = 0; i < args.length; i++) {
+                if (args[i].equals("--delay") && i + 1 < args.length) {
+                    delay = Integer.parseInt(args[i + 1]);
+                }
+                if (args[i].equals("--cache") && i + 1 < args.length) {
+                    cacheType = args[i + 1];
+                } else if (args[i].equals("--output") && i + 1 < args.length) {
+                    outputFile = args[i + 1];
+                }
+            }
+
+            // Change output file based on cache type
+            if (outputFile.equals("naive_server.txt")) {
+                switch (cacheType) {
+                    case "server_cache":
+                        outputFile = "server_cache.txt";
+                        break;
+                    case "client_cache":
+                        outputFile = "client_cache.txt";
+                        break;
+                    default:
+                        outputFile = "naive.txt";
+                        break;
+                }
+            }
+
+            // Connect to RMI registry at default port 1099 and search for the proxy from that registry
             Registry registry = LocateRegistry.getRegistry();
-            ServerInterface server = (ServerInterface) registry.lookup("server");
+            ProxyInterface proxy = (ProxyInterface) registry.lookup("proxy"); // Assume 'proxy' is registered with this name
 
-            // Path to the input file
-            String inputFile = "src/main/resources/exercise_1_input.txt";
-            String outputFile = "naive_server.txt"; // maybe different path?
-
-            // Parse and execute queries
+            // Parse and execute queries 
             List<Query> queries = parseInputFile(inputFile);
-            executeQueries(queries, server, outputFile);
+
+            // Loop through each query, get the available server for the query's zone, and execute the query
+            for (Query query : queries) {
+                // Get the available server for the query's zone from the proxy
+                ServerInterface server = proxy.getAvailableServer(query.zone);
+
+                // Now execute the query on the correct server
+                executeQueries(Arrays.asList(query), server, outputFile, delay);
+            }
 
         } catch (RemoteException | NotBoundException e) {
             e.printStackTrace();
@@ -40,51 +79,45 @@ public class Client {
      * objets Each line of the input file should specify a method name,
      * arguments, and a zone. The method reads the input file line by line,
      * parses the information, and stores each query as a Query object in a
-     * list.
-     *
-     * Expected input format: <method name> <arg1> <arg2> <arg3>
+     * list. Expected input format: <method name> <arg1> <arg2> <arg3>
      * Zone:<zone number>
-     * Example line in input file: getPopulationofCountry United States Zone:1
      *
      * @param inputFile The path to the input file containing the queries.
      * @return A list of Query objects created from the parsed input file.
      */
     private static List<Query> parseInputFile(String inputFile) {
-        // List to store parsed queries
         List<Query> queries = new ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             String line;
 
-            // Loop through each line in the input file
             while ((line = br.readLine()) != null) {
-                // Split the line into individual "parts" based on spaces
-                String[] parts = line.split(" ");
-                // The first part is the method name (e.g., getPopulationofCountry)
-                String methodName = parts[0];
-                // A list to store the arguments for the method (e.g., "United States")
-                List<String> args = new ArrayList<>();
-                // Variable to store the zone number (e.g., Zone:1 -> zone = 1)
-                int zone = -1;
-
-                // Start from the second part to capture arguments and zone number
-                for (int i = 1; i < parts.length; i++) {
-                    // If the part starts with "Zone:", extract the zone number
-                    if (parts[i].startsWith("Zone:")) {
-                        // Extract the number after "Zone:" and convert it to an integer
-                        zone = Integer.parseInt(parts[i].substring(5));
-                    } else {
-                        // Otherwise, add the part to the arguments list
-                        args.add(parts[i]);
-                    }
+                int zoneIndex = line.indexOf("Zone:");
+                if (zoneIndex == -1) {
+                    continue; // Skip lines without zone information
                 }
-                // Create a new Query object with the method name, arguments, and zone
-                // and add it to the list of queries
+
+                int zone = Integer.parseInt(line.substring(zoneIndex + 5).trim());  // Extracts the zone number safely
+
+                // The rest of the line without the zone part
+                String methodAndArgs = line.substring(0, zoneIndex).trim();
+
+                String[] parts = methodAndArgs.split(" ", 2);  // Split into method name and the arguments as one string
+                String methodName = parts[0];
+                List<String> args = new ArrayList<>();
+                if (parts.length > 1) {
+                    String arguments = parts[1];
+                    // Handle arguments that could be multiple words
+                    args.addAll(Arrays.asList(arguments.split(
+                            " (?=\\d)")));  // Splits by space before a number
+                }
+
                 queries.add(new Query(methodName, args, zone));
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         return queries;
     }
 
@@ -128,7 +161,7 @@ public class Client {
     }
 
     /**
-     * Executes the list of queries by invoking the appropriate method on the
+     * Executes list of queries by invoking the appropriate method on the
      * server, records the turnaround, execution, and waiting times, and logs
      * the results to an output file. Also, it tracks stats (like average, min,
      * and max times) for each method type.
@@ -139,7 +172,7 @@ public class Client {
      * @param outputFile The path to the output file where results and stats
      * will be logged.
      */
-    private static void executeQueries(List<Query> queries, ServerInterface server, String outputFile) {
+    private static void executeQueries(List<Query> queries, ServerInterface server, String outputFile, int delay) {
         // Create a map to store stats for each method
         HashMap<String, TaskStats> methodStats = new HashMap<>();
 
@@ -156,28 +189,33 @@ public class Client {
 
                 // Executing remote method invocation based on the method name
                 switch (query.methodName) {
-                    case "getPopulationofCountry":
-                        // Measure execution start time for the specific method
+                    case "getPopulationOfCountry":
                         startExecutionTime = System.currentTimeMillis();
-                        // Call the server-side method getPopulationofCountry
-                        result = server.getPopulationofCountry(query.args.get(0));
-                        // Measure execution end time after getting the result from the server
+                        result = server.getPopulationOfCountry(query.args.get(0));
                         endExecutionTime = System.currentTimeMillis();
                         break;
 
                     case "getNumberofCities":
                         startExecutionTime = System.currentTimeMillis();
-                        // Parse minimum population from the query's arguments
                         int minPop = Integer.parseInt(query.args.get(1));
-                        // Call the server-side method getNumberofCities
-                        result = server.getNumberOfCities(query.args.get(0), minPop);  // e.g., "Norway"
+                        result = server.getNumberOfCities(query.args.get(0), minPop);
                         endExecutionTime = System.currentTimeMillis();
                         break;
 
                     case "getNumberofCountries":
                         startExecutionTime = System.currentTimeMillis();
-
-                    // ++ resterende methods ...
+                        if (query.args.size() == 2) {
+                            int cityCount = Integer.parseInt(query.args.get(0));
+                            int minPopulation = Integer.parseInt(query.args.get(1));
+                            result = server.getNumberOfCountries(cityCount, minPopulation);
+                        } else if (query.args.size() == 3) {
+                            int cityCount = Integer.parseInt(query.args.get(0));
+                            int minPopulation = Integer.parseInt(query.args.get(1));
+                            int maxPopulation = Integer.parseInt(query.args.get(2));
+                            result = server.getNumberOfCountries(cityCount, minPopulation, maxPopulation);
+                        }
+                        endExecutionTime = System.currentTimeMillis();
+                        break;
                 }
 
                 // Log the result and time metrics for the query
@@ -229,7 +267,7 @@ public class Client {
 
         // Log the result and time metrics in the spesific format
         writer.write(String.format("%d %s (turnaround time: %d ms, execution time: %d ms, waiting time: %d ms, processed by Server Zone:%d)\n",
-                result, query.methodName, turnaroundTime, executionTime, waitingTime, query.zone));
+                result, query, turnaroundTime, executionTime, waitingTime, query.zone));
     }
 
     /**
@@ -238,13 +276,7 @@ public class Client {
      *
      * @param methodStats A map that stores stats for each method type (method
      * name -> TaskStats).
-     * @param methodName The name of the method whose stats are being updated.
-     * @param turnaroundTime The total time taken for the query (turnaround
-     * time).
-     * @param executionTime The time taken by the server to execute the query
-     * (execution time).
-     * @param waitingTime The time the query spent waiting before being
-     * processed (waiting time).
+     *
      */
     private static void updateStats(HashMap<String, TaskStats> methodStats, String methodName, long turnaroundTime, long executionTime, long waitingTime) {
         // Retrieve the current stats for this method type or create a new TaskStats if none exist
@@ -255,16 +287,7 @@ public class Client {
         methodStats.put(methodName, stats);
     }
 
-    /**
-     * Logs the final stats for all method types to the output file after all
-     * queries are processed.
-     *
-     * @param writer The FileWriter used to log the final stats to the output
-     * file.
-     * @param methodStats A map that contains the stats for each method type
-     * (method name -> TaskStats).
-     * @throws IOException If there is an error writing to the output file.
-     */
+    /* Logs the final stats for all method types to the output file after all queries are processed. */
     private static void logFinalStats(FileWriter writer, HashMap<String, TaskStats> methodStats) throws IOException {
         // Iterate over each method type and log its stats (average, min, max times)
         for (String methodName : methodStats.keySet()) {
@@ -275,10 +298,7 @@ public class Client {
         }
     }
 
-    /**
-     * A helper class to track stats (turnaround, execution, waiting times) for
-     * each method type.
-     */
+    /* A helper class to track stats (turnaround, execution, waiting times) for each method type.*/
     static class TaskStats {
 
         private long totalTurnaroundTime = 0;  // Total turnaround time for all tasks of this method type

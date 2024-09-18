@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -40,12 +41,16 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
      * Constructs a Server object and initializes the country data from the CSV file.
      * @throws RemoteException if a network issue occurs during RMI setup.
      */
-    public Server(int serverZone, boolean cacheEnabled) throws IOException {
+    public Server(int serverZone, String cacheMode, int delay) throws IOException {
         this.serverZone = serverZone;
-        this.cacheEnabled = cacheEnabled;
+        this.cacheEnabled = ("server".equals(cacheMode) || "client".equals(cacheMode));
         this.waitingList = new LinkedBlockingQueue<>();
         this.cache = new Cache(150);
-        this.logWaitingListWriter = new PrintWriter(new FileWriter("server_zone_"+serverZone+"_waiting_list_log.txt", true), false); //set false to overwrite previous file
+
+        String fileName = "server_zone_"+serverZone+"_log_" + cacheMode + "_delay_" + delay + ".txt";
+        String filePath = Paths.get("output", fileName).toString();
+
+        this.logWaitingListWriter = new PrintWriter(new FileWriter(filePath, true), false); //set false to overwrite previous file
 
 
         System.out.println("Initializing server zone " + serverZone + "...");
@@ -61,7 +66,18 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
      */
     public static void main(String[] args){
         try {
-            boolean enableCache = args.length > 0 && args[0].equals("--cache");
+            String cacheMode = "naive";
+            int delay = 50;
+
+            // Parse command-line arguments
+            for (int i = 0; i < args.length; i++) {
+                if (args[i].equals("--delay") && i + 1 < args.length) {
+                    delay = Integer.parseInt(args[i + 1]);
+                }
+                if (args[i].equals("--cache") && i + 1 < args.length) {
+                    cacheMode = args[i + 1];
+                }
+            }
             
             // Create or get the registry
             Registry registry;
@@ -73,7 +89,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
             Server[] servers = new Server[5];
 
             for (int i = 0; i < servers.length; i++) {
-                servers[i] = new Server(i+1, enableCache);
+                servers[i] = new Server(i+1, cacheMode, delay);
 
                 // Unexport servers if already exported
                 try {
@@ -84,7 +100,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                 registry.bind(serverName, serverStub);
             }
 
-            System.out.println("Server up and ready with cache " + (enableCache ? "enabled" : "not enabled"));
+            System.out.println("Server up and ready with cache mode " + cacheMode);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -101,6 +117,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                 try {
                     Request request = waitingList.take();
                     long executionStart = System.currentTimeMillis();
+
+                    // Pause execution thread based on where client is from
+                    Thread.sleep((request.getClientZone() == serverZone) ? 80 : 170);
 
                     // get a key for the request, including its arguments
                     String[] argsAsString = Arrays.stream(request.getArgs()).map(Object::toString).toArray(String[]::new);
@@ -155,9 +174,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     @Override
     public Response getPopulationOfCountry(String countryName, int clientZone) throws RemoteException {
         try {
-            Thread.sleep((clientZone == serverZone) ? 80 : 170);
-
-            Request request = new Request("getPopulationOfCountry", new Object[] {countryName});
+            Request request = new Request("getPopulationOfCountry", new Object[] {countryName}, clientZone);
             waitingList.put(request);
             logWaitingList();
 
@@ -173,9 +190,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     @Override
     public Response getNumberOfCities(String countryName, int minPopulation, int clientZone) throws RemoteException {
         try {
-            Thread.sleep((clientZone == serverZone) ? 80 : 170);
-
-            Request request = new Request("getNumberOfCities", new Object[] {countryName, minPopulation});
+            Request request = new Request("getNumberOfCities", new Object[] {countryName, minPopulation}, clientZone);
             waitingList.put(request);
             logWaitingList();
 
@@ -191,9 +206,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     @Override
     public Response getNumberOfCountries(int cityCount, int minPopulation, int clientZone) throws RemoteException {
         try {
-            Thread.sleep((clientZone == serverZone) ? 80 : 170);
-
-            Request request = new Request("getNumberOfCountries", new Object[] {cityCount, minPopulation});
+            Request request = new Request("getNumberOfCountries", new Object[] {cityCount, minPopulation}, clientZone);
             waitingList.put(request);
             logWaitingList();
 
@@ -209,9 +222,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     @Override
     public Response getNumberOfCountries(int cityCount, int minPopulation, int maxPopulation, int clientZone) throws RemoteException {
         try {
-            Thread.sleep((clientZone == serverZone) ? 80 : 170);
-
-            Request request = new Request("getNumberOfCountries", new Object[] {cityCount, minPopulation, maxPopulation});
+            Request request = new Request("getNumberOfCountries", new Object[] {cityCount, minPopulation, maxPopulation}, clientZone);
             waitingList.put(request);
             logWaitingList();
 
@@ -319,12 +330,14 @@ class Request {
     private final Object[] args;
     private final long queueTime;
     private final CompletableFuture<Response> responseFuture;
+    private final int clientZone;
 
-    public Request(String method, Object[] args) {
+    public Request(String method, Object[] args, int clientZone) {
         this.method = method;
         this.args = args;
         this.queueTime = System.currentTimeMillis();
         this.responseFuture = new CompletableFuture<>();
+        this.clientZone = clientZone;
     }
 
     public String getMethod() {
@@ -337,6 +350,10 @@ class Request {
 
     public long getQueueTime() {
         return queueTime;
+    }
+
+    public long getClientZone() {
+        return clientZone;
     }
 
     public CompletableFuture<Response> getResponseFuture() {

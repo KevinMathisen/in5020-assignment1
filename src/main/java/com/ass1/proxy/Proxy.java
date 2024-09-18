@@ -74,14 +74,16 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 
 		// Consider the next 2 zones if the local zone is overloaded
 		if (localZoneQueueLength >= 18) {
-			Integer zone2QueueLength = serverQueueLength.get(zone+1 == 6 ? 1 : zone+1);
-			Integer zone3QueueLength = serverQueueLength.get(zone+2 == 6 ? 1 : zone+2 == 7 ? 2 : zone+2);
+			int zone2 = (zone%5)+1;
+			int zone3 = ((zone+1)%5) + 1;
+			Integer zone2QueueLength = serverQueueLength.get(zone2);
+			Integer zone3QueueLength = serverQueueLength.get(zone3);
 
 			if (zone2QueueLength < 18 || zone3QueueLength < 18) {
 				if (zone2QueueLength <= zone3QueueLength) {
-					selectedZone = zone2QueueLength;
+					selectedZone = zone2;
 				} else {
-					selectedZone = zone3QueueLength;
+					selectedZone = zone3;
 				}
 			}
 		}

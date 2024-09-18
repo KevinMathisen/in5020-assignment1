@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
@@ -51,19 +52,21 @@ public class Client {
             if (outputFile.equals("naive.txt")) {
                 switch (cacheType) {
                     case "server":
-                        outputFile = "server_cache.txt";
+                        outputFile = "server_cache_delay_" + delay + ".txt";
                         break;
                     case "client":
-                        outputFile = "client_cache.txt";
+                        outputFile = "client_cache_delay_" + delay + ".txt";
                         break;
                     default:
-                        outputFile = "naive.txt";
+                        outputFile = "naive_delay_" + delay + ".txt";
                         break;
                 }
             }
 
+            outputFile = Paths.get("output", outputFile).toString();
+
             // give user info
-            System.out.println("Client up, writing to file " + outputFile + ", with delay " + delay);
+            System.out.println("Client up, writing to file " + outputFile + ", with delay " + delay + "ms");
             Thread.sleep(3000);
 
             try (FileWriter writer = new FileWriter(outputFile)) {

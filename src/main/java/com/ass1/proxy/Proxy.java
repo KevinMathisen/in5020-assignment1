@@ -14,8 +14,8 @@ import com.ass1.server.ServerInterface;
 
 public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 	private final HashMap<Integer, String> serverNames;
-	private HashMap<Integer, Integer> serverQueueLength;
-	private HashMap<Integer, Integer> serverAccessCount;
+	private final HashMap<Integer, Integer> serverQueueLength;
+	private final HashMap<Integer, Integer> serverAccessCount;
 
 	private final Registry registry;
 	private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -31,9 +31,32 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 		this.registry = LocateRegistry.getRegistry();
 
 		serverNames = new HashMap<>();
+		serverQueueLength = new HashMap<>();
+		serverAccessCount = new HashMap<>();
+
 		for (int i = 1; i <= 5; i++) {
 			serverNames.put(i, "Server zone "+i);
 			fetchServerQueueLength(i);
+		}
+	}
+
+	public static void main(String[] args) throws java.rmi.AlreadyBoundException {
+		try {
+			Registry registry = LocateRegistry.getRegistry();
+
+			Proxy proxy = new Proxy();
+
+			// Unexport proxy if already exported
+			try {
+				UnicastRemoteObject.unexportObject(proxy, true);
+			} catch (Exception e) {}
+			ProxyInterface proxyStub = (ProxyInterface) UnicastRemoteObject.exportObject(proxy, 0);
+			registry.bind("Proxy", proxyStub);
+
+			System.out.println("Proxy up and ready");
+
+		} catch (RemoteException | AlreadyBoundException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -97,7 +120,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 			String serverName = serverNames.get(zone); 
 			ServerInterface server = (ServerInterface) registry.lookup(serverName);
 
-			int queueLength = server.GetQueueLength();
+			int queueLength = server.getQueueLength();
 
 			serverQueueLength.put(zone, queueLength);
 		} catch (RemoteException | AlreadyBoundException | NotBoundException e) {

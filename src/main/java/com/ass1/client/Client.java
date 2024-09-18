@@ -48,12 +48,12 @@ public class Client {
             final String finalCacheType = cacheType;
 
             // Change output file based on cache type
-            if (outputFile.equals("naive_server.txt")) {
+            if (outputFile.equals("naive.txt")) {
                 switch (cacheType) {
-                    case "server_cache":
+                    case "server":
                         outputFile = "server_cache.txt";
                         break;
-                    case "client_cache":
+                    case "client":
                         outputFile = "client_cache.txt";
                         break;
                     default:
@@ -61,6 +61,10 @@ public class Client {
                         break;
                 }
             }
+
+            // give user info
+            System.out.println("Client up, writing to file " + outputFile + ", with delay " + delay);
+            Thread.sleep(3000);
 
             try (FileWriter writer = new FileWriter(outputFile)) {
 
@@ -79,7 +83,7 @@ public class Client {
                     // Execute the query on a new thread
                     Thread thread = new Thread(() -> {
                         try {
-                            executeQueries(query, server, writer, finalCacheType.equals("client_cache"), cache, methodStats);
+                            executeQueries(query, server, writer, finalCacheType.equals("client"), cache, methodStats);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -177,9 +181,10 @@ public class Client {
             if (clientCacheEnabled && cache.containsKey(query.toString())) {
                 result = new Response(cache.get(query.toString()), 0, 0, 0);                    
             } else {
+                
                 // Executing remote method invocation based on the method name
                 switch (query.getMethodName()) {
-                    case "getPopulationOfCountry"   -> result = server.getPopulationOfCountry(query.args.get(0), clientZone);
+                    case "getPopulationofCountry"   -> result = server.getPopulationOfCountry(query.args.get(0), clientZone);
                     case "getNumberofCities"        -> result = server.getNumberOfCities(query.args.get(0), Integer.parseInt(query.args.get(1)), clientZone);
                     case "getNumberofCountries1"    -> result = server.getNumberOfCountries(Integer.parseInt(query.args.get(0)), Integer.parseInt(query.args.get(1)), clientZone);
                     case "getNumberofCountries2"    -> result = server.getNumberOfCountries(Integer.parseInt(query.args.get(0)), Integer.parseInt(query.args.get(1)), Integer.parseInt(query.args.get(2)), clientZone);
@@ -218,11 +223,14 @@ public class Client {
      * @throws IOException If there is an error writing to the output file.
      */
     private static void logResult(FileWriter writer, Query query, Response result, long turnaroundTime) throws IOException {
+        String output = String.format("%d %s (turnaround time: %d ms, execution time: %d ms, waiting time: %d ms, processed by Server Zone:%d)\n",
+        result.getResult(), query.toString(), turnaroundTime, result.getExecutionTime(), result.getWaitingTime(), result.getServerZone());
+        
         // Log the result and time metrics in the spesific format
         synchronized (writer) {
-            writer.write(String.format("%d %s (turnaround time: %d ms, execution time: %d ms, waiting time: %d ms, processed by Server Zone:%d)\n",
-                    result.getResult(), query.toString(), turnaroundTime, result.getExecutionTime(), result.getWaitingTime(), result.getServerZone()));
+            writer.write(output);
         }
+        System.out.println(output);
     }
 
     /**
@@ -246,11 +254,14 @@ public class Client {
     private static void logFinalStats(FileWriter writer, HashMap<String, TaskStats> methodStats) throws IOException {
         // Iterate over each method type and log its stats (average, min, max times)
         synchronized (writer) {
+            System.out.println("\nFinal stats:");
             for (String methodName : methodStats.keySet()) {
                 TaskStats stats = methodStats.get(methodName);
-                writer.write(String.format("%s avg turn-around time: %d ms, avg execution time: %d ms, avg waiting time: %d ms, min turn-around time: %d ms, max turn-around time: %d ms\n",
-                        methodName, stats.getAverageTurnaroundTime(), stats.getAverageExecutionTime(), stats.getAverageWaitingTime(),
-                        stats.getMinTurnaroundTime(), stats.getMaxTurnaroundTime()));
+                String output = String.format("%s avg turn-around time: %d ms, avg execution time: %d ms, avg waiting time: %d ms, min turn-around time: %d ms, max turn-around time: %d ms\n",
+                methodName, stats.getAverageTurnaroundTime(), stats.getAverageExecutionTime(), stats.getAverageWaitingTime(),
+                stats.getMinTurnaroundTime(), stats.getMaxTurnaroundTime());
+                writer.write(output);
+                System.out.println(output);
             }
     }
     }

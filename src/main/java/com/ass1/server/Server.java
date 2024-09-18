@@ -12,6 +12,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -44,7 +45,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         this.cacheEnabled = cacheEnabled;
         this.waitingList = new LinkedBlockingQueue<>();
         this.cache = new Cache(150);
-        this.logWaitingListWriter = new PrintWriter(new FileWriter("server_zone_"+serverZone+"_waiting_list_log.txt", true), true);
+        this.logWaitingListWriter = new PrintWriter(new FileWriter("server_zone_"+serverZone+"_waiting_list_log.txt", true), false); //set false to overwrite previous file
 
 
         System.out.println("Initializing server zone " + serverZone + "...");
@@ -60,17 +61,30 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
      */
     public static void main(String[] args){
         try {
-            boolean enableCache = args.length > 0 && args[0].equals("useServerCaching");
+            boolean enableCache = args.length > 0 && args[0].equals("--cache");
             
-            Registry registry = LocateRegistry.getRegistry();
+            // Create or get the registry
+            Registry registry;
+            try {
+                registry = LocateRegistry.createRegistry(1099);
+            } catch (Exception e) {
+                registry = LocateRegistry.getRegistry();
+            }
             Server[] servers = new Server[5];
 
             for (int i = 0; i < servers.length; i++) {
-                servers[i] = new Server(i, enableCache);
-                ServerInterface serverStub = (ServerInterface) UnicastRemoteObject.exportObject(registry, 0);
-                String serverName = "Server zone " + i;
+                servers[i] = new Server(i+1, enableCache);
+
+                // Unexport servers if already exported
+                try {
+                    UnicastRemoteObject.unexportObject(servers[i], true);
+                } catch (Exception e) {}
+                ServerInterface serverStub = (ServerInterface) UnicastRemoteObject.exportObject(servers[i], 0);
+                String serverName = "Server zone " + (i+1);
                 registry.bind(serverName, serverStub);
             }
+
+            System.out.println("Server up and ready with cache " + (enableCache ? "enabled" : "not enabled"));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -88,7 +102,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                     Request request = waitingList.take();
                     long executionStart = System.currentTimeMillis();
 
-                    String requestKey = request.getMethod() + ": " + String.join(",", (CharSequence[]) request.getArgs());
+                    // get a key for the request, including its arguments
+                    String[] argsAsString = Arrays.stream(request.getArgs()).map(Object::toString).toArray(String[]::new);
+                    String requestKey = request.getMethod() + ": " + String.join(",", argsAsString);
                     int result;
 
                     if (cacheEnabled && cache.containsKey(requestKey)) {
@@ -114,7 +130,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
                     long executionStopTime = System.currentTimeMillis();
                     long executionTime = executionStopTime - executionStart;
-                    long waitingTime = executionStopTime - request.getQueueTime();
+                    long waitingTime = executionStart - request.getQueueTime();
 
                     request.getResponseFuture().complete(new Response(result, executionTime, waitingTime, serverZone));
 
@@ -212,6 +228,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
      */
     private void logWaitingList() {
         logWaitingListWriter.println(System.currentTimeMillis() + ": " + waitingList.size());
+        System.out.println("Server zone " + serverZone + " has queue length: " + waitingList.size());
     }
 
     /**

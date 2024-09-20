@@ -3,7 +3,7 @@
 ## Overview
 
 This user guide explains how to compile and run the distributed application, including the server, proxy, and client components.
-The application accepts delays and caching through command-line flags.
+The application accepts delays and caching through command-line arguments.
 
 ## Prerequisites
 

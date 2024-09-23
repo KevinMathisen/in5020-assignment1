@@ -42,6 +42,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
      * @throws RemoteException if a network issue occurs during RMI setup.
      */
     public Server(int serverZone, String cacheMode, int delay) throws IOException {
+        System.out.println("Initializing server zone " + serverZone + "...");
+        
         this.serverZone = serverZone;
         this.cacheEnabled = ("server".equals(cacheMode) || "client".equals(cacheMode));
         this.waitingList = new LinkedBlockingQueue<>();
@@ -52,8 +54,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
         this.logWaitingListWriter = new PrintWriter(new FileWriter(filePath, true), false); //set false to overwrite previous file
 
-
-        System.out.println("Initializing server zone " + serverZone + "...");
         loadCitiesFromCSV();
         System.out.println("Loaded " + countries.size() + " countries.");
 
@@ -61,8 +61,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
 
     /**
-     * The main method to launch the RMI server and register it in the RMI registry.
-     * @param args Command line arguments (not used).
+     * The main method to launch the RMI servers and register them in the RMI registry.
+     * @param args Command line arguments
      */
     public static void main(String[] args){
         try {
@@ -88,6 +88,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
             }
             Server[] servers = new Server[5];
 
+            // For each server, export it and register it to the registry
             for (int i = 0; i < servers.length; i++) {
                 servers[i] = new Server(i+1, cacheMode, delay);
 
@@ -141,7 +142,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                             }
                             default -> result = 0;
                         }
-
+                        // Update cache if enabled
                         if (cacheEnabled) {
                             cache.put(requestKey, result);
                         }
@@ -151,6 +152,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                     long executionTime = executionStopTime - executionStart;
                     long waitingTime = executionStart - request.getQueueTime();
 
+                    // Complete request, returning a reponse object
                     request.getResponseFuture().complete(new Response(result, executionTime, waitingTime, serverZone));
 
                 } catch (InterruptedException e) {

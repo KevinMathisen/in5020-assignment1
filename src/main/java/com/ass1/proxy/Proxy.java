@@ -40,6 +40,11 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 		}
 	}
 
+	/**
+	 * Gets the registry, initializes the proxy objecy, export the remote object, and binds it to the registry
+	 * @param args
+	 * @throws java.rmi.AlreadyBoundException
+	 */
 	public static void main(String[] args) throws java.rmi.AlreadyBoundException {
 		try {
 			Registry registry = LocateRegistry.getRegistry();
@@ -50,6 +55,8 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 			try {
 				UnicastRemoteObject.unexportObject(proxy, true);
 			} catch (Exception e) {}
+
+			// Export proxy and bind to the name 'Proxy' in the registry
 			ProxyInterface proxyStub = (ProxyInterface) UnicastRemoteObject.exportObject(proxy, 0);
 			registry.bind("Proxy", proxyStub);
 
@@ -79,6 +86,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 			Integer zone2QueueLength = serverQueueLength.get(zone2);
 			Integer zone3QueueLength = serverQueueLength.get(zone3);
 
+			// Select zone with shortest queue if any of them are shorter than 18
 			if (zone2QueueLength < 18 || zone3QueueLength < 18) {
 				if (zone2QueueLength <= zone3QueueLength) {
 					selectedZone = zone2;

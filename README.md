@@ -3,14 +3,13 @@
 ## Overview
 
 This user guide explains how to compile and run the distributed application, including the server, proxy, and client components.
-The application accepts delays and caching through command-line arguments.
+The application accepts delays and caching through command-line arguments. An output folder must already exist in the project directory. If it doesn't, create the folder before running the application to store the generated output files.
+
 
 ## Prerequisites
 
 - **Java Development Kit (JDK) 8** 
-- **Apache Maven** 
-
-  
+- **Apache Maven**  
 
  **Compile the project:**
 Before running the application, the project needs to be compiled and packaged.

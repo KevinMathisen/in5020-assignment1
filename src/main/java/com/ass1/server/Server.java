@@ -142,10 +142,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                             }
                             default -> result = 0;
                         }
-                        // Update cache if enabled
-                        if (cacheEnabled) {
-                            cache.put(requestKey, result);
-                        }
+                    }
+                    // Update cache if enabled
+                    if (cacheEnabled) {
+                        cache.put(requestKey, result);
                     }
 
                     long executionStopTime = System.currentTimeMillis();
@@ -153,7 +153,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                     long waitingTime = executionStart - request.getQueueTime();
 
                     // Complete request, returning a reponse object
-                    request.getResponseFuture().complete(new Response(result, executionTime, waitingTime, serverZone));
+                    request.getResponseFuture().complete(
+                        new Response(result, executionTime, waitingTime, serverZone));
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -240,7 +241,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
      * Logs the amount of requests in the waiting list and the current time
      */
     private void logWaitingList() {
-        logWaitingListWriter.println(System.currentTimeMillis() + ": " + waitingList.size());
+        synchronized (logWaitingListWriter) {
+            logWaitingListWriter.println(System.currentTimeMillis() + ": " + waitingList.size());
+            logWaitingListWriter.flush(); 
+        }
         System.out.println("Server zone " + serverZone + " has queue length: " + waitingList.size());
     }
 

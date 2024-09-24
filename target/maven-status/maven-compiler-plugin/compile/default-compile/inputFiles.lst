@@ -1,7 +1,7 @@
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/proxy/ProxyInterface.java
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/server/ServerInterface.java
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/server/Server.java
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/proxy/Proxy.java
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/Main.java
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/client/Client.java
-/home/kevin/Documents/Master/IN5020/assignment1/in5020-assignment1/src/main/java/com/ass1/server/Response.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\client\Client.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\Main.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\proxy\Proxy.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\proxy\ProxyInterface.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\server\Response.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\server\Server.java
+C:\Users\kevin\Documents\Master\IN5020\assignment1\in5020-assignment1\src\main\java\com\ass1\server\ServerInterface.java

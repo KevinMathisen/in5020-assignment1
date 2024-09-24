@@ -81,7 +81,8 @@ public class Client {
                 // Loop through each query, get the available server for the querys zone, and execute the query
                 for (Query query : queries) {
 
-                    ServerInterface server = proxy.getAvailableServer(query.zone);
+                    Integer serverZone = proxy.getAvailableServer(query.zone);
+                    ServerInterface server = (ServerInterface) registry.lookup("Server zone "+serverZone);
                     
                     // Execute the query on a new thread
                     Thread thread = new Thread(() -> {
@@ -192,9 +193,9 @@ public class Client {
                     case "getNumberofCountries1"    -> result = server.getNumberOfCountries(Integer.parseInt(query.args.get(0)), Integer.parseInt(query.args.get(1)), clientZone);
                     case "getNumberofCountries2"    -> result = server.getNumberOfCountries(Integer.parseInt(query.args.get(0)), Integer.parseInt(query.args.get(1)), Integer.parseInt(query.args.get(2)), clientZone);
                 }
-                if (clientCacheEnabled) {
-                    cache.put(query.toString(), result.getResult());
-                }
+            }
+            if (clientCacheEnabled) {
+                cache.put(query.toString(), result.getResult());
             }
 
             long turnaroundTime = System.currentTimeMillis() - startTurnaroundTime;

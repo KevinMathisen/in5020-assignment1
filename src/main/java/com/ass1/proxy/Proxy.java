@@ -74,7 +74,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 	 * @throws RemoteException if a remote error occurs
 	 */
 	@Override
-	public ServerInterface getAvailableServer(Integer zone) throws RemoteException {
+	public Integer getAvailableServer(Integer zone) throws RemoteException {
 		Integer selectedZone = zone;
 
 		Integer localZoneQueueLength = serverQueueLength.get(zone);
@@ -98,15 +98,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 
 		updateServerAccessCount(selectedZone);
 
-		try {
-			String serverName = serverNames.get(selectedZone);
-			ServerInterface selectedServer = (ServerInterface) registry.lookup(serverName);
-			return selectedServer;
-
-		} catch (RemoteException | AlreadyBoundException | NotBoundException e) {
-			System.out.print(e);
-			throw new RemoteException("Unable to retrieve server in zone " + selectedZone, e);
-		}
+		return selectedZone;
 	}
 
 	/**
@@ -114,6 +106,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 	 * @param zone - zone of the server to access
 	 */
 	private void updateServerAccessCount(Integer zone) {
+		// Update server access count by 1, if it is 18 reset it to 0
 		serverAccessCount.compute(zone, (k, accessCount) -> (accessCount == null ? 0 : accessCount + 1) % 18);
 		if (serverAccessCount.get(zone) == 0) {
 			// fetch the server queue length in another thread

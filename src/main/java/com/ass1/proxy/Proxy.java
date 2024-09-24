@@ -88,7 +88,7 @@ public class Proxy extends UnicastRemoteObject implements ProxyInterface {
 
 			// Select zone with shortest queue if any of them are shorter than 18
 			if (zone2QueueLength < 18 || zone3QueueLength < 18) {
-				if (zone2QueueLength <= zone3QueueLength) {
+				if (zone2QueueLength < zone3QueueLength) {
 					selectedZone = zone2;
 				} else {
 					selectedZone = zone3;
